@@ -50,6 +50,7 @@
   "Search for `gitstatus-eshell-neighbour-regex' in this many lines."
   :type 'integer
   :group 'gitstatus-eshell)
+(make-obsolete-variable 'gitstatus-eshell-prompt-lines nil "30.1")
 
 
 ;;; Internal variables
@@ -85,8 +86,9 @@
 		      (insert " " msg)
 		      (add-text-properties pos (+ 1 pos (length msg))
 					   '(read-only t
-						       front-sticky (face read-only)
-						       rear-nonsticky (face read-only))))))))))))))
+                                                       field prompt
+						       front-sticky (face read-only field)
+						       rear-nonsticky (face read-only field))))))))))))))
 
 
 ;;; Utility functions
@@ -102,24 +104,14 @@
 (defun gitstatus-eshell--find-place ()
   "Find the right place in `eshell' prompt."
   (goto-char (point-max))
-  (re-search-backward eshell-prompt-regexp nil t 1)
-  (let ((cnt gitstatus-eshell-prompt-lines)
-	(mstart (match-beginning 0))
-	(place))
-    (when (and mstart (> cnt 0))
-      (while (> cnt 0)
-	(let* ((start (if (= cnt gitstatus-eshell-prompt-lines) mstart (line-beginning-position)))
-	       (end (if (= cnt gitstatus-eshell-prompt-lines) (match-end 0) (line-end-position))))
-	  (string-match gitstatus-eshell-neighbour-regex (buffer-substring start end))
-	  (setq place
-		(if gitstatus-eshell-is-neighbour-append
-		    (match-end 1)
-		  (match-beginning 1)))
-	  (if place
-	      (setq cnt 0)
-	    (forward-line -1)
-	    (beginning-of-line)
-	    (setq cnt (1- cnt))))))
+  (let ((mstart (progn (text-property-search-backward 'field 'prompt t) (point)))
+        (mend (field-end))
+        (place))
+    (when (string-match gitstatus-eshell-neighbour-regex (buffer-substring mstart mend))
+      (setq place
+	    (if gitstatus-eshell-is-neighbour-append
+	        (match-end 1)
+	      (match-beginning 1))))
     place))
 
 (provide 'gitstatus-eshell)
